@@ -7,6 +7,21 @@ from tqdm import tqdm
 
 app = typer.Typer()
 
+# Credits: YoungLord https://github.com/Young-Lord/QQ-History-Backup/blob/b7d7f136020d0699c8dd802b3dff65247aeb6698/QQ_History.py#L99
+def getSafePath(ans: str) -> str:
+    ban_words = "\\  /  :  *  ?  \"  '  <  >  |  $  \r  \n".replace(
+        ' ', '')
+    ban_strips = "#/~"
+    while True:
+        ans_bak = ans
+        for i in ban_words:
+            ans = ans.replace(i, "")
+        for i in ban_strips:
+            ans = ans.strip(i)
+        if ans == ans_bak:  # 多次匹配
+            break
+    return ans
+
 def export_chathistory(user_id: str):
     res = requests.get("http://localhost:48065/wechat/chatlog", params={
         "userId": user_id,
@@ -23,7 +38,8 @@ def export_all(dest: Path):
 
     for user in tqdm(all_users['items']):
         usr_chatlog = export_chathistory(user['arg'])
-        with open(dest/((user['title'] or "")+user['arg']+'.json'), 'w') as f:
+        out_path = dest/getSafePath((user['title'] or "")+"-"+user['arg']+'.json')
+        with open(out_path, 'w') as f:
             json.dump(usr_chatlog, f)
 
 if __name__ == "__main__":

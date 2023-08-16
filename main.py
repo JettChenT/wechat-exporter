@@ -3,6 +3,7 @@ import typer
 from pathlib import Path
 import requests
 from tqdm import tqdm
+import subprocess
 
 app = typer.Typer()
 
@@ -30,9 +31,9 @@ def export_all(dest: Path):
     if not dest.is_dir():
         typer.echo("Destination path is not a directory!", err=True)
         return
-    all_users = requests.get("http://localhost:48065/wechat/search").json()
+    all_users = requests.get("http://localhost:48065/wechat/allcontacts").json()
 
-    for user in tqdm(all_users['items']):
+    for user in tqdm(all_users):
         usr_chatlog = export_chathistory(user['arg'])
         out_path = dest/get_safe_path((user['title'] or "")+"-"+user['arg']+'.json')
         with open(out_path, 'w', encoding='utf-8') as f:

@@ -1,5 +1,4 @@
 import json
-
 import typer
 from pathlib import Path
 import requests
@@ -7,20 +6,17 @@ from tqdm import tqdm
 
 app = typer.Typer()
 
-# Credits: YoungLord https://github.com/Young-Lord/QQ-History-Backup/blob/b7d7f136020d0699c8dd802b3dff65247aeb6698/QQ_History.py#L99
-def getSafePath(ans: str) -> str:
-    ban_words = "\\  /  :  *  ?  \"  '  <  >  |  $  \r  \n".replace(
+def get_safe_path(s: str) -> str:
+    """
+    Remove invalid characters to sanitize a path.
+    :param s: str to sanitize
+    :returns: sanitized str
+    """
+    ban_chars = "\\  /  :  *  ?  \"  '  <  >  |  $  \r  \n".replace(
         ' ', '')
-    ban_strips = "#/~"
-    while True:
-        ans_bak = ans
-        for i in ban_words:
-            ans = ans.replace(i, "")
-        for i in ban_strips:
-            ans = ans.strip(i)
-        if ans == ans_bak:  # 多次匹配
-            break
-    return ans
+    for i in ban_chars:
+        s = s.replace(i, "")
+    return s
 
 def export_chathistory(user_id: str):
     res = requests.get("http://localhost:48065/wechat/chatlog", params={
@@ -38,8 +34,8 @@ def export_all(dest: Path):
 
     for user in tqdm(all_users['items']):
         usr_chatlog = export_chathistory(user['arg'])
-        out_path = dest/getSafePath((user['title'] or "")+"-"+user['arg']+'.json')
-        with open(out_path, 'w') as f:
+        out_path = dest/get_safe_path((user['title'] or "")+"-"+user['arg']+'.json')
+        with open(out_path, 'w', encoding='utf-8') as f:
             json.dump(usr_chatlog, f)
 
 if __name__ == "__main__":

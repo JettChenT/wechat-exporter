@@ -8,16 +8,14 @@ app = typer.Typer()
 
 def get_safe_path(s: str) -> str:
     """
-    Remove invalid characters & prefixes to sanitize a path.
+    Remove invalid characters to sanitize a path.
     :param s: str to sanitize
     :returns: sanitized str
     """
-    ban_words = "\\  /  :  *  ?  \"  '  <  >  |  $  \r  \n".replace(
+    ban_chars = "\\  /  :  *  ?  \"  '  <  >  |  $  \r  \n".replace(
         ' ', '')
-    ban_strips = "#/~"
-    for i in ban_words:
+    for i in ban_chars:
         s = s.replace(i, "")
-    s = s.strip(i)
     return s
 
 def export_chathistory(user_id: str):

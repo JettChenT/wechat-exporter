@@ -49,8 +49,16 @@ def export_chathistory(user_id: str):
 @app.command()
 def export_all(dest: Path):
     if not dest.is_dir():
-        typer.echo("Destination path is not a directory!", err=True)
-        return
+        if not dest.exists():
+            inp = typer.prompt("Destination path does not exist, create it? (y/n)")
+            if inp.lower() == 'y':
+                dest.mkdir(parents=True)
+            else:
+                typer.echo("Aborted.", err=True)
+                return
+        else:
+            typer.echo("Destination path is not a directory!", err=True)
+            return
     all_users = requests.get("http://localhost:48065/wechat/allcontacts").json()
 
     for user in tqdm(all_users):
@@ -58,6 +66,8 @@ def export_all(dest: Path):
         out_path = dest/get_safe_path((user['title'] or "")+"-"+user['arg']+'.json')
         with open(out_path, 'w', encoding='utf-8') as f:
             json.dump(usr_chatlog, f)
+
+    print(f"Exported {len(all_users)} users' chat history to {dest} in json.")
 
 if __name__ == "__main__":
     app()

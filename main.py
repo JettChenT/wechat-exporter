@@ -4,6 +4,7 @@ from pathlib import Path
 import requests
 from tqdm import tqdm
 import xml.etree.ElementTree as ET
+from typing_extensions import Annotated
 
 app = typer.Typer()
 
@@ -47,7 +48,10 @@ def export_chathistory(user_id: str):
     return res['chatLogs']
 
 @app.command()
-def export_all(dest: Path):
+def export_all(dest: Annotated[Path, typer.Argument(help="Destination path to export to.")]):
+    """
+    Export all users' chat history to json files.
+    """
     if not dest.is_dir():
         if not dest.exists():
             inp = typer.prompt("Destination path does not exist, create it? (y/n)")

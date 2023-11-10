@@ -5,6 +5,7 @@ import requests
 from tqdm import tqdm
 import xml.etree.ElementTree as ET
 from typing_extensions import Annotated
+import sqlite3
 
 app = typer.Typer()
 
@@ -38,6 +39,13 @@ def process_history(history: str):
             return history
     return history
 
+def get_message(history: dict | str):
+    if isinstance(history, dict):
+        if 'title' in history:
+            return history['title']
+    else:
+        return history
+
 def export_chathistory(user_id: str):
     res = requests.get("http://localhost:48065/wechat/chatlog", params={
         "userId": user_id,
@@ -45,6 +53,7 @@ def export_chathistory(user_id: str):
     }).json()
     for i in range(len(res['chatLogs'])):
         res['chatLogs'][i]['content'] = process_history(res['chatLogs'][i]['content'])
+        res['chatLogs'][i]['message'] = get_message(res['chatLogs'][i]['content'])
     return res['chatLogs']
 
 @app.command()
@@ -72,6 +81,26 @@ def export_all(dest: Annotated[Path, typer.Argument(help="Destination path to ex
             json.dump(usr_chatlog, f)
 
     print(f"Exported {len(all_users)} users' chat history to {dest} in json.")
+
+@app.command()
+def export_sqlite(dest: Annotated[Path, typer.Argument(help="Destination path to export to.")] = Path("chatlog.db")):
+    """
+    Export all users' chat history to a sqlite database.
+    """
+    connection = sqlite3.connect(dest)
+    cursor = connection.cursor()
+    cursor.execute("CREATE TABLE IF NOT EXISTS chatlog (id INTEGER PRIMARY KEY AUTOINCREMENT, with_id TEXT, from_user TEXT, to_user TEXT, message TEXT, timest DATETIME, auxiliary TEXT)")
+    cursor.execute("CREATE INDEX IF NOT EXISTS chatlog_with_id_index ON chatlog (with_id)")
+    cursor.execute("CREATE TABLE iF NOT EXISTS users (id TEXT PRIMARY KEY, name TEXT)")
+
+    all_users = requests.get("http://localhost:48065/wechat/allcontacts").json()
+    for user in tqdm(all_users):
+        cursor.execute("INSERT OR IGNORE INTO users (id, name) VALUES (?, ?)", (user['arg'], user['title']))
+        usr_chatlog = export_chathistory(user['arg'])
+        for msg in usr_chatlog:
+            cursor.execute("INSERT INTO chatlog (with_id, from_user, to_user, message, timest, auxiliary) VALUES (?, ?, ?, ?, ?, ?)", (user['arg'], msg['fromUser'], msg['toUser'], msg['message'], msg['createTime'], str(msg['content'])))
+    connection.commit()
+
 
 if __name__ == "__main__":
     app()
